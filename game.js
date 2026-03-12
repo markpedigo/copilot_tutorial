@@ -1,7 +1,10 @@
 const MAX_CORRECT = 5;
+const STORAGE_KEY = "mathMiniGame:stats";
 
 const questionEl = document.getElementById("question");
 const scoreEl = document.getElementById("score");
+const streakEl = document.getElementById("streak");
+const bestEl = document.getElementById("best");
 const feedbackEl = document.getElementById("feedback");
 const form = document.getElementById("answer-form");
 const answerInput = document.getElementById("answer");
@@ -10,6 +13,11 @@ const restartButton = document.getElementById("restart");
 
 let currentAnswer = null;
 let correctCount = 0;
+let runStart = null;
+let currentStreak = 0;
+let bestStreak = 0;
+let bestTime = null;
+let previousBestStreak = 0;
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -33,8 +41,50 @@ function pickQuestion() {
   return { questionText, answer };
 }
 
+function formatTime(ms) {
+  if (ms == null) return "—";
+  const seconds = ms / 1000;
+  return seconds < 10 ? `${seconds.toFixed(1)}s` : `${seconds.toFixed(0)}s`;
+}
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    currentStreak = typeof parsed.currentStreak === "number" ? parsed.currentStreak : 0;
+    bestStreak = parsed.bestStreak || 0;
+    bestTime = typeof parsed.bestTime === "number" ? parsed.bestTime : null;
+  } catch {
+    currentStreak = 0;
+    bestStreak = 0;
+    bestTime = null;
+  }
+  previousBestStreak = bestStreak;
+}
+
+function saveStats() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ currentStreak, bestStreak, bestTime })
+  );
+}
+
+function maybeLogNewBestStreak() {
+  if (typeof window.logLongestStreak !== "function") return;
+  if (bestStreak > previousBestStreak) {
+    window.logLongestStreak(bestStreak);
+    previousBestStreak = bestStreak;
+  }
+}
+
 function updateScore() {
   scoreEl.textContent = `Correct: ${correctCount} / ${MAX_CORRECT}`;
+}
+
+function updateStreaks() {
+  streakEl.textContent = `Streak: ${currentStreak}`;
+  bestEl.textContent = `Best: ${bestStreak} win${bestStreak === 1 ? "" : "s"} • ${formatTime(bestTime)}`;
 }
 
 function setQuestion() {
@@ -48,7 +98,17 @@ function setQuestion() {
 }
 
 function celebrateWin() {
-  feedbackEl.textContent = "🎉 You won! Great work!";
+  const elapsed = Date.now() - runStart;
+  const timeString = formatTime(elapsed);
+
+  currentStreak += 1;
+  bestStreak = Math.max(bestStreak, currentStreak);
+  bestTime = bestTime == null ? elapsed : Math.min(bestTime, elapsed);
+  saveStats();
+  maybeLogNewBestStreak();
+  updateStreaks();
+
+  feedbackEl.textContent = `🎉 You won! Time: ${timeString}`;
   feedbackEl.className = "feedback success";
   controls.hidden = false;
   form.querySelector("button").disabled = true;
@@ -58,6 +118,8 @@ function celebrateWin() {
 function resetGame() {
   correctCount = 0;
   updateScore();
+  updateStreaks();
+  runStart = Date.now();
   controls.hidden = true;
   form.querySelector("button").disabled = false;
   answerInput.disabled = false;
@@ -97,10 +159,14 @@ form.addEventListener("submit", (event) => {
     feedbackEl.textContent = "❌ Not quite — try again.";
     feedbackEl.className = "feedback error";
     answerInput.select();
+    currentStreak = 0;
+    saveStats();
+    updateStreaks();
   }
 });
 
 restartButton.addEventListener("click", resetGame);
 
 // Initialize game on first load.
+loadStats();
 resetGame();

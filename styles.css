@@ -69,6 +69,19 @@ header p {
   font-weight: 600;
 }
 
+.meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.meta .streak,
+.meta .best {
+  font-weight: 600;
+}
+
 .question {
   font-size: 1.35rem;
   line-height: 1.4;
