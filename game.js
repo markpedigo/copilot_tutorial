@@ -10,6 +10,7 @@ const form = document.getElementById("answer-form");
 const answerInput = document.getElementById("answer");
 const controls = document.getElementById("controls");
 const restartButton = document.getElementById("restart");
+const resetStatsButton = document.getElementById("reset-stats");
 
 let currentAnswer = null;
 let correctCount = 0;
@@ -76,6 +77,17 @@ function maybeLogNewBestStreak() {
     window.logLongestStreak(bestStreak);
     previousBestStreak = bestStreak;
   }
+}
+
+function resetStats() {
+  currentStreak = 0;
+  bestStreak = 0;
+  bestTime = null;
+  previousBestStreak = 0;
+  saveStats();
+  updateStreaks();
+  feedbackEl.textContent = "Stats cleared!";
+  feedbackEl.className = "feedback";
 }
 
 function updateScore() {
@@ -166,6 +178,10 @@ form.addEventListener("submit", (event) => {
 });
 
 restartButton.addEventListener("click", resetGame);
+resetStatsButton.addEventListener("click", () => {
+  resetStats();
+  resetGame();
+});
 
 // Initialize game on first load.
 loadStats();
